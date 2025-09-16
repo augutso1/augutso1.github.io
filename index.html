@@ -29,7 +29,7 @@
 
     body {
       margin: 0;
-      background: radial-gradient(1200px 600px at 70% -10%, #1e293b 0, #0b1220 60%, #090c17 100%);
+      background: #0f172a;
       font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
       color: var(--text)
     }
@@ -474,7 +474,17 @@
     }
 
     function loadStack(idx) {
-      if (state.filtered.length === 0) { return }
+      if (state.filtered.length === 0) {
+        // Esconde o cartão e limpa campos se não houver cartas
+        document.getElementById('stackCard').style.display = 'none';
+        document.getElementById('s_topic').textContent = '';
+        document.getElementById('s_q').textContent = '';
+        document.getElementById('s_a').textContent = '';
+        document.getElementById('s_sub').textContent = '';
+        document.getElementById('s_id').textContent = '';
+        return;
+      }
+      document.getElementById('stackCard').style.display = '';
       state.stackIndex = (idx % state.filtered.length + state.filtered.length) % state.filtered.length;
       const c = state.filtered[state.stackIndex];
       document.getElementById('stackCard').classList.remove('flipped');
@@ -483,6 +493,8 @@
       document.getElementById('s_a').textContent = c.a;
       document.getElementById('s_sub').textContent = c.sub;
       document.getElementById('s_id').textContent = '#' + c.id;
+      // Atualiza stats para refletir o cartão atual
+      document.getElementById('stats').textContent = `${state.stackIndex + 1}/${state.filtered.length}`;
     }
 
     // ----- Utils -----
