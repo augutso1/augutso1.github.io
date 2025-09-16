@@ -385,7 +385,7 @@
         <div class="a">${c.a}</div>
         <div class="toolbar">
           <div class="left">
-            <button class="btn mark">Marcar como memorizado</button>
+            <button class="btn mark">${learned ? 'Desmarcar memorizado' : 'Marcar como memorizado'}</button>
           </div>
           <div>
             <button class="btn flip">Voltar</button>
@@ -404,9 +404,14 @@
       });
       card.querySelectorAll('.flip').forEach(btn => btn.addEventListener('click', () => card.classList.toggle('flipped')));
       card.querySelector('.mark').addEventListener('click', () => {
-        state.progress.add(id);
+        if (state.progress.has(id)) {
+          state.progress.delete(id);
+        } else {
+          state.progress.add(id);
+        }
         persistProgress();
         updateStats();
+        renderGrid(); // Atualiza o botão e o visual
       });
     }
 
@@ -415,7 +420,8 @@
     }
 
     function updateStats() {
-      const learned = [...state.progress].filter(id => state.filtered.some(c => c.id === id)).length;
+      // Conta quantos cartões do filtro atual estão memorizados
+      const learned = state.filtered.filter(c => state.progress.has(c.id)).length;
       const total = state.filtered.length;
       document.getElementById('stats').textContent = `${learned}/${total}`;
     }
