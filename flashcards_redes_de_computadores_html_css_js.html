@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flashcards – Redes de Computadores</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      /* slate-900 */
+      --panel: #111827ee;
+      /* gray-900 */
+      --muted: #94a3b8;
+      /* slate-400 */
+      --text: #e5e7eb;
+      /* gray-200 */
+      --accent: #22d3ee;
+      /* cyan-400 */
+      --accent-2: #a78bfa;
+      /* violet-400 */
+      --good: #34d399;
+      /* emerald-400 */
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 600px at 70% -10%, #1e293b 0, #0b1220 60%, #090c17 100%);
+      font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text)
+    }
+
+    header {
+      padding: 24px 18px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+      letter-spacing: .2px
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    select,
+    button,
+    input[type="search"] {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      outline: none
+    }
+
+    button {
+      cursor: pointer;
+      transition: .2s transform, .3s background
+    }
+
+    button:hover {
+      transform: translateY(-1px)
+    }
+
+    .pill {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #0a0f1a;
+      color: var(--muted)
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px 48px
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px
+    }
+
+    .card {
+      position: relative;
+      min-height: 220px;
+      background: linear-gradient(180deg, #0b1324, #0e1426);
+      border: 1px solid #203048;
+      border-radius: 18px;
+      perspective: 1000px;
+      box-shadow: 0 10px 30px #0004
+    }
+
+    .inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform .5s;
+      transform-style: preserve-3d
+    }
+
+    .card.flipped .inner {
+      transform: rotateY(180deg)
+    }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      padding: 18px 16px 50px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      backface-visibility: hidden;
+      border-radius: 18px
+    }
+
+    .back {
+      transform: rotateY(180deg)
+    }
+
+    .topic {
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: .4px;
+      text-transform: uppercase
+    }
+
+    .q {
+      font-size: 15px;
+      line-height: 1.35
+    }
+
+    .a {
+      font-size: 14px;
+      color: #d1d5db
+    }
+
+    .toolbar {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      gap: 8px;
+      justify-content: space-between
+    }
+
+    .toolbar .left {
+      display: flex;
+      gap: 8px
+    }
+
+    .tag {
+      font-size: 11px;
+      color: #c7d2fe;
+      border: 1px dashed #374151;
+      border-radius: 10px;
+      padding: 4px 8px;
+      opacity: .8
+    }
+
+    .ok {
+      border-color: #14532d;
+      color: #86efac
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid #243041;
+      background: #0a1222
+    }
+
+    .primary {
+      border-color: #155e75;
+      background: #083344
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9ca3af
+    }
+
+    .hidden {
+      display: none
+    }
+
+    .stack-mode {
+      margin: 18px 0 8px
+    }
+
+    .stack {
+      max-width: 740px;
+      margin: 0 auto
+    }
+
+    .big {
+      min-height: 280px
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Flashcards – Redes de Computadores</h1>
+    <div class="controls">
+      <input id="search" type="search" placeholder="buscar… (ex.: DNS, HTTP, camada de rede)" />
+      <select id="topic"></select>
+      <select id="sub"></select>
+      <button id="shuffle" class="btn">Embaralhar</button>
+      <button id="stackToggle" class="btn">Modo Pilha</button>
+      <span class="pill stats" id="stats">0/0</span>
+      <button id="reset" class="btn">Zerar Progresso</button>
+    </div>
+  </header>
+  <main>
+    <section id="stack" class="stack hidden">
+      <div id="stackCard" class="card big">
+        <div class="inner">
+          <div class="face front">
+            <span class="topic" id="s_topic"></span>
+            <div class="q" id="s_q"></div>
+            <div class="toolbar">
+              <div class="left">
+                <span class="tag" id="s_sub"></span>
+                <span class="tag" id="s_id"></span>
+              </div>
+              <div>
+                <button id="s_flip" class="btn primary">Mostrar resposta</button>
+              </div>
+            </div>
+          </div>
+          <div class="face back">
+            <span class="topic">Resposta</span>
+            <div class="a" id="s_a"></div>
+            <div class="toolbar">
+              <div class="left"><span class="tag ok">Acertei</span></div>
+              <div>
+                <button id="s_prev" class="btn">◀ Anterior</button>
+                <button id="s_next" class="btn primary">Próximo ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer muted">Dica: clique na carta para virar. Seu progresso fica salvo no navegador.</div>
+    </section>
+    <section id="grid" class="grid"></section>
+  </main>
+  <script>
+    // ===== Dataset ==============================================================
+    // Fonte: PDFs/imagens enviados pelo usuário. As questões foram resumidas e
+    // organizadas por tópico e subtópico.
+    const DATA = [
+      // --- CONCEITOS / HISTÓRIA / GOVERNANÇA ---
+      { topic: 'Conceitos & História', sub: 'Definições', q: 'Definição clássica de rede de computadores?', a: 'Conjunto de computadores AUTÔNOMOS interconectados capazes de trocar informações por diferentes meios (cobre, fibra, rádio, satélite).' },
+      { topic: 'Conceitos & História', sub: 'Evolução', q: 'Nos anos 70, qual consequência da descentralização motivou as primeiras redes?', a: 'A necessidade de COMPARTILHAR dados e periféricos e gerenciar informação espalhada.' },
+      { topic: 'Conceitos & História', sub: 'Organizações', q: 'O que é RFC?', a: 'Request for Comments: documento público e numerado que propõe/atualiza protocolos, padrões e políticas da Internet.' },
+      { topic: 'Conceitos & História', sub: 'Organizações', q: 'Função da IANA?', a: 'Gerir números e nomes: endereços IPv4/IPv6, DNS (TLDs), portas de protocolo e identificadores.' },
+      { topic: 'Conceitos & História', sub: 'Brasil', q: 'O que marcou a massificação da Internet no Brasil em 1995?', a: 'A montagem do backbone comercial pela Embratel (serviço para empresas e público).' },
+      { topic: 'Conceitos & História', sub: 'Termos', q: 'Backbone é…', a: 'A espinha dorsal que interliga redes e regiões, transportando tráfego de longa distância.' },
+
+      // --- MODELOS DE CAMADA ---
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Comparação', q: 'Como a camada de Aplicação no TCP/IP é definida vs. OSI?', a: 'No TCP/IP as aplicações são definidas por protocolos descritos em RFCs (sem estrutura rígida); o OSI separa Sessão/Apresentação/Aplicação.' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Transporte', q: 'Quando usar UDP em vez de TCP?', a: 'Streaming ao vivo/tempo real: tolera perda, prioriza baixa latência; UDP é não orientado a conexão e simples.' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Inter‑Rede', q: 'O que significa dizer que o IP é “não confiável”?', a: 'Não garante entrega, ordem ou integridade dos pacotes; camadas superiores cuidam disso (ex.: TCP).' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Interface de Rede', q: 'Principal função desta camada no TCP/IP relacionada a endereços?', a: 'Traduzir endereços Lógicos (IP) em endereços físicos (MAC/next‑hop). Corresponde às camadas Física + Enlace do OSI.' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'OSI – Enlace', q: 'Responsabilidades da camada de Enlace (OSI)?', a: 'Detecção/correção de erros da Física, enquadramento (frames) e controle de fluxo no enlace.' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'OSI – Rede', q: 'Serviço onde pacotes podem seguir rotas diferentes?', a: 'Serviço de datagramas (não orientado à conexão).' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'OSI – Apresentação', q: 'Função crítica p/ arquiteturas diferentes (endianess)?', a: 'Transformar dados para uma representação canônica comum.' },
+      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Encapsulamento', q: 'Unidade formada na ENLACE antes dos bits?', a: 'Quadro (frame) com cabeçalho/CRC (FCS).' },
+
+      // --- DNS ---
+      { topic: 'DNS', sub: 'Conceito', q: 'Tarefa essencial do DNS?', a: 'Mapear nomes de domínio em endereços IP.' },
+      { topic: 'DNS', sub: 'Motivação', q: 'Por que abandonar o namespace “flat”?', a: 'Conflito de nomes, inviabilidade de administração central e recursos insuficientes; solução: nomes HIERÁRQUICOS e distribuídos.' },
+      { topic: 'DNS', sub: 'Componentes', q: 'Quem inicia a busca de IP consultando servidores de nomes?', a: 'O resolvedor (cliente DNS) chama o servidor recursivo que segue na hierarquia.' },
+      { topic: 'DNS', sub: 'Fluxo', q: 'Ordem típica de resolução?', a: 'Cliente/Resolver → Servidor Recursivo → Raiz → TLD → Autoritativo → Recursivo (cache) → Cliente.' },
+      { topic: 'DNS', sub: 'Tipos de consulta', q: 'Recursiva vs. Iterativa vs. Não‑recursiva?', a: 'Recursiva: cliente ↔ recursivo (entrega final). Iterativa: recursivo ↔ (raiz/TLD/autoritativo) recebendo referências. Não‑recursiva: resposta direta do cache/autoridade conhecida.' },
+      { topic: 'DNS', sub: 'Registros', q: 'A, AAAA, MX, NS – o que cada um faz?', a: 'A: nome→IPv4; AAAA: nome→IPv6; MX: servidor(s) de e‑mail do domínio; NS: servidores autoritativos do domínio.' },
+      { topic: 'DNS', sub: 'SOA/TTL', q: 'Papel do “minimum TTL” no SOA?', a: 'Indica por quanto tempo registros podem permanecer em cache.' },
+      { topic: 'DNS', sub: 'Ferramentas', q: 'Para que serve o nslookup -type=mx domínio?', a: 'Consulta os servidores de e‑mail (MX) e suas prioridades (menor número = maior prioridade).' },
+      { topic: 'DNS', sub: 'Raiz/TLD', q: 'Quantas “zonas lógicas” de servidores raiz existem e por quê há muitas réplicas?', a: '13 zonas lógicas; centenas de réplicas (anycast) para resiliência e baixa latência.' },
+
+      // --- HTTP / WEB ---
+      { topic: 'Web (HTTP/Cache)', sub: 'Versões', q: 'Por que HTTP/1.1 costuma ser mais rápido que 1.0?', a: 'Conexões PERSISTENTES permitem transferir múltiplos objetos por uma única conexão TCP.' },
+      { topic: 'Web (HTTP/Cache)', sub: 'Respostas', q: 'O que significa 404 Not Found?', a: 'Servidor não localizou o recurso solicitado (URI não corresponde a objeto existente).' },
+      { topic: 'Web (HTTP/Cache)', sub: 'Cache', q: 'Quem tem precedência: Cache-Control: max-age ou Expires?', a: 'Cache-Control (diretriz moderna) prevalece sobre Expires.' },
+
+      // --- E‑MAIL ---
+      { topic: 'E‑mail', sub: 'Protocolos', q: 'Quais protocolos para envio e para leitura de e‑mails?', a: 'Envio: SMTP. Leitura: POP3 ou IMAP.' },
+      { topic: 'E‑mail', sub: 'Caminho', q: 'Fluxo típico (cliente→servidores→cliente) do serviço de e‑mail?', a: '1 SMTP (cliente→servidor de origem), 2 SMTP (entre servidores), 3 SMTP (entrega no servidor de destino), 4 POP/IMAP (cliente lê).' },
+
+      // --- TOPOLOGIAS / CLASSIFICAÇÃO ---
+      { topic: 'Topologias', sub: 'Física vs. Lógica', q: 'Diferença principal entre topologia física e lógica?', a: 'Física = disposição dos cabos e nós; Lógica = como os dados fluem/formatos de comunicação.' },
+      { topic: 'Topologias', sub: 'Barra', q: 'Desvantagem crítica da topologia em barra?', a: 'Colisões, difícil detecção de falhas e um ponto de falha no barramento que derruba toda a rede.' },
+      { topic: 'Topologias', sub: 'Estrela (LAN)', q: 'Por que estrela é popular em LANs?', a: 'Nó central facilita gestão; falha de um enlace não para a rede inteira.' },
+      { topic: 'Classificação', sub: 'Geográfica', q: 'Interligar campi em várias cidades: LAN, MAN ou WAN?', a: 'WAN (longa distância, maior retardo/menor taxa que LAN).' },
+
+      // --- MEIOS FÍSICOS / TRANSMISSÃO ---
+      { topic: 'Meios Físicos', sub: 'Par Trançado', q: 'Uma desvantagem do cabo de par trançado:', a: 'Susceptível a interferências; comprimento típico de até 100 m por lance.' },
+      { topic: 'Meios Físicos', sub: 'Fibra Ótica', q: 'Principal barreira para adoção ampla da fibra?', a: 'CUSTO (cabo, ferramentas e mão de obra especializados).' },
+      { topic: 'Transmissão', sub: 'Sentido', q: 'Controle de tráfego aéreo (não pode falar simultâneo). Qual o modo?', a: 'Half‑duplex (ambos transmitem, mas não ao mesmo tempo).' },
+      { topic: 'Transmissão', sub: 'Problemas', q: 'O que é “retardo” na comunicação?', a: 'Diferença entre o instante de transmissão e o de recepção (atraso total).' },
+
+      // --- EXTRAS (Exercícios abertos convertidos em cartões curtos) ---
+      { topic: 'Extras', sub: 'Redes de acesso', q: 'O que são redes de acesso?', a: 'Redes que conectam usuários finais (ADSL, cabo, FTTH) à rede do provedor/Internet.' },
+      { topic: 'Extras', sub: 'Redes core', q: 'O que é rede “core”?', a: 'Espinha dorsal de uma operadora/organização que interliga pontos de acesso e serviços.' },
+      { topic: 'Extras', sub: 'Sistemas finais', q: 'O que são nós/sistemas finais?', a: 'Dispositivos que enviam/recebem dados (PCs, servidores, impressoras, etc.).' },
+      { topic: 'Extras', sub: 'FTP', q: 'Por que o FTP usa duas portas TCP (21 e 20)?', a: 'Separar controle (autenticação/comandos) do fluxo de dados de transferência.' },
+    ];
+
+    // ===== App State ============================================================
+    function safeProgress() {
+      try { return new Set(JSON.parse(localStorage.getItem('rc_progress') || '[]')); }
+      catch (e) { console.warn('Progresso inválido no localStorage. Reiniciando.'); return new Set(); }
+    }
+    const state = {
+      all: [],
+      filtered: [],
+      stackIndex: 0,
+      stackMode: false,
+      progress: safeProgress(),
+    };
+
+    function init() {
+      // Validação rápida do dataset ("testes" em tempo de execução)
+      selfTestsRawData();
+      // atribuir IDs estáveis às cartas
+      state.all = DATA.map((c, i) => ({ ...c, id: i + 1 }));
+      selfTestsState();
+      renderFilters();
+      applyFilters();
+      bindGlobal();
+    }
+
+    // ----- Filtros -----
+    function renderFilters() {
+      const topics = [...new Set(state.all.map(c => c.topic))];
+      const topicSel = document.getElementById('topic');
+      topicSel.innerHTML = ['<option value="">Todos os tópicos</option>']
+        .concat(topics.map(t => `<option>${t}</option>`)).join('');
+
+      const subSel = document.getElementById('sub');
+      subSel.innerHTML = '<option value="">Todos os subtópicos</option>';
+
+      topicSel.addEventListener('change', () => {
+        const subs = [...new Set(state.all.filter(c => !topicSel.value || c.topic === topicSel.value).map(c => c.sub))];
+        document.getElementById('sub').innerHTML = ['<option value="">Todos os subtópicos</option>']
+          .concat(subs.map(s => `<option>${s}</option>`)).join('');
+        applyFilters();
+      });
+      document.getElementById('sub').addEventListener('change', applyFilters);
+      document.getElementById('search').addEventListener('input', debounce(applyFilters, 140));
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const t = document.getElementById('topic').value;
+      const s = document.getElementById('sub').value;
+      state.filtered = state.all.filter(c =>
+        (!t || c.topic === t) && (!s || c.sub === s) && (!q || (c.q + " " + c.a + " " + c.topic + " " + c.sub).toLowerCase().includes(q))
+      );
+      renderGrid();
+      updateStats();
+      if (state.stackMode) loadStack(0);
+    }
+
+    // ----- Grid de cartas -----
+    function renderGrid() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = state.filtered.map(renderCard).join('');
+      grid.querySelectorAll('.card').forEach(card => attachCardEvents(card));
+    }
+
+    function renderCard(c) {
+      const learned = state.progress.has(c.id);
+      return `<article class="card ${learned ? 'learned' : ''}" data-id="${c.id}">
+    <div class="inner">
+      <div class="face front">
+        <span class="topic">${c.topic}</span>
+        <div class="q">${c.q}</div>
+        <div class="toolbar">
+          <div class="left">
+            <span class="tag">${c.sub}</span>
+            <span class="tag">#${c.id}</span>
+          </div>
+          <div>
+            <button class="btn primary flip">Mostrar resposta</button>
+          </div>
+        </div>
+      </div>
+      <div class="face back">
+        <span class="topic">Resposta</span>
+        <div class="a">${c.a}</div>
+        <div class="toolbar">
+          <div class="left">
+            <button class="btn mark">Marcar como memorizado</button>
+          </div>
+          <div>
+            <button class="btn flip">Voltar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>`
+    }
+
+    function attachCardEvents(card) {
+      const id = +card.dataset.id;
+      card.addEventListener('click', e => {
+        if (e.target.closest('button')) return; // evita flip ao clicar no botão
+        card.classList.toggle('flipped');
+      });
+      card.querySelectorAll('.flip').forEach(btn => btn.addEventListener('click', () => card.classList.toggle('flipped')));
+      card.querySelector('.mark').addEventListener('click', () => {
+        state.progress.add(id);
+        persistProgress();
+        updateStats();
+      });
+    }
+
+    function persistProgress() {
+      localStorage.setItem('rc_progress', JSON.stringify([...state.progress]));
+    }
+
+    function updateStats() {
+      const learned = [...state.progress].filter(id => state.filtered.some(c => c.id === id)).length;
+      const total = state.filtered.length;
+      document.getElementById('stats').textContent = `${learned}/${total}`;
+    }
+
+    // ----- Modo pilha (estudo focado) -----
+    function bindGlobal() {
+      document.getElementById('shuffle').onclick = () => { shuffle(state.filtered); renderGrid(); if (state.stackMode) loadStack(0) };
+      document.getElementById('reset').onclick = () => { if (confirm('Limpar progresso salvo?')) { state.progress.clear(); persistProgress(); updateStats(); renderGrid(); } };
+      document.getElementById('stackToggle').onclick = () => {
+        state.stackMode = !state.stackMode;
+        document.getElementById('grid').classList.toggle('hidden', state.stackMode);
+        document.getElementById('stack').classList.toggle('hidden', !state.stackMode);
+        document.getElementById('stackToggle').textContent = state.stackMode ? 'Modo Grade' : 'Modo Pilha';
+        if (state.stackMode) loadStack(0);
+      };
+      // Pilha
+      document.getElementById('stackCard').addEventListener('click', () => document.getElementById('stackCard').classList.toggle('flipped'));
+      document.getElementById('s_flip').onclick = () => document.getElementById('stackCard').classList.toggle('flipped');
+      document.getElementById('s_next').onclick = () => loadStack(state.stackIndex + 1);
+      document.getElementById('s_prev').onclick = () => loadStack(state.stackIndex - 1);
+    }
+
+    function loadStack(idx) {
+      if (state.filtered.length === 0) { return }
+      state.stackIndex = (idx % state.filtered.length + state.filtered.length) % state.filtered.length;
+      const c = state.filtered[state.stackIndex];
+      document.getElementById('stackCard').classList.remove('flipped');
+      document.getElementById('s_topic').textContent = c.topic;
+      document.getElementById('s_q').textContent = c.q;
+      document.getElementById('s_a').textContent = c.a;
+      document.getElementById('s_sub').textContent = c.sub;
+      document.getElementById('s_id').textContent = '#' + c.id;
+    }
+
+    // ----- Utils -----
+    function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[arr[i], arr[j]] = [arr[j], arr[i]] } }
+    function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
+
+    // ===== Self-tests (dev) =====
+    function selfTestsRawData() {
+      console.groupCollapsed('Flashcards – self-tests (DATA)');
+      console.assert(Array.isArray(DATA) && DATA.length > 0, 'DATA deve ser um array não-vazio');
+      DATA.forEach((c, i) => {
+        console.assert(c.topic && c.sub && c.q && c.a, 'Card faltando campos obrigatórios em index ' + i);
+      });
+      console.groupEnd();
+    }
+    function selfTestsState() {
+      console.groupCollapsed('Flashcards – self-tests (STATE)');
+      const ids = new Set();
+      let dup = false; state.all.forEach(c => { if (ids.has(c.id)) dup = true; ids.add(c.id); });
+      console.assert(!dup, 'IDs dos cards devem ser únicos');
+      console.groupEnd();
+    }
+
+    init();
+  </script>
+</body>
+
+</html>
