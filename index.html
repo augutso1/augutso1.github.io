@@ -234,43 +234,11 @@
       <select id="topic"></select>
       <select id="sub"></select>
       <button id="shuffle" class="btn">Embaralhar</button>
-      <button id="stackToggle" class="btn">Modo Pilha</button>
       <span class="pill stats" id="stats">0/0</span>
       <button id="reset" class="btn">Zerar Progresso</button>
     </div>
   </header>
   <main>
-    <section id="stack" class="stack hidden">
-      <div id="stackCard" class="card big">
-        <div class="inner">
-          <div class="face front">
-            <span class="topic" id="s_topic"></span>
-            <div class="q" id="s_q"></div>
-            <div class="toolbar">
-              <div class="left">
-                <span class="tag" id="s_sub"></span>
-                <span class="tag" id="s_id"></span>
-              </div>
-              <div>
-                <button id="s_flip" class="btn primary">Mostrar resposta</button>
-              </div>
-            </div>
-          </div>
-          <div class="face back">
-            <span class="topic">Resposta</span>
-            <div class="a" id="s_a"></div>
-            <div class="toolbar">
-              <div class="left"><span class="tag ok">Acertei</span></div>
-              <div>
-                <button id="s_prev" class="btn">◀ Anterior</button>
-                <button id="s_next" class="btn primary">Próximo ▶</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="footer muted">Dica: clique na carta para virar. Seu progresso fica salvo no navegador.</div>
-    </section>
     <section id="grid" class="grid"></section>
   </main>
   <script>
@@ -343,8 +311,6 @@
     const state = {
       all: [],
       filtered: [],
-      stackIndex: 0,
-      stackMode: false,
       progress: safeProgress(),
     };
 
@@ -388,7 +354,6 @@
       );
       renderGrid();
       updateStats();
-      if (state.stackMode) loadStack(0);
     }
 
     // ----- Grid de cartas -----
@@ -457,44 +422,8 @@
 
     // ----- Modo pilha (estudo focado) -----
     function bindGlobal() {
-      document.getElementById('shuffle').onclick = () => { shuffle(state.filtered); renderGrid(); if (state.stackMode) loadStack(0) };
+      document.getElementById('shuffle').onclick = () => { shuffle(state.filtered); renderGrid(); };
       document.getElementById('reset').onclick = () => { if (confirm('Limpar progresso salvo?')) { state.progress.clear(); persistProgress(); updateStats(); renderGrid(); } };
-      document.getElementById('stackToggle').onclick = () => {
-        state.stackMode = !state.stackMode;
-        document.getElementById('grid').classList.toggle('hidden', state.stackMode);
-        document.getElementById('stack').classList.toggle('hidden', !state.stackMode);
-        document.getElementById('stackToggle').textContent = state.stackMode ? 'Modo Grade' : 'Modo Pilha';
-        if (state.stackMode) loadStack(0);
-      };
-      // Pilha
-      document.getElementById('stackCard').addEventListener('click', () => document.getElementById('stackCard').classList.toggle('flipped'));
-      document.getElementById('s_flip').onclick = () => document.getElementById('stackCard').classList.toggle('flipped');
-      document.getElementById('s_next').onclick = () => loadStack(state.stackIndex + 1);
-      document.getElementById('s_prev').onclick = () => loadStack(state.stackIndex - 1);
-    }
-
-    function loadStack(idx) {
-      if (state.filtered.length === 0) {
-        // Esconde o cartão e limpa campos se não houver cartas
-        document.getElementById('stackCard').style.display = 'none';
-        document.getElementById('s_topic').textContent = '';
-        document.getElementById('s_q').textContent = '';
-        document.getElementById('s_a').textContent = '';
-        document.getElementById('s_sub').textContent = '';
-        document.getElementById('s_id').textContent = '';
-        return;
-      }
-      document.getElementById('stackCard').style.display = '';
-      state.stackIndex = (idx % state.filtered.length + state.filtered.length) % state.filtered.length;
-      const c = state.filtered[state.stackIndex];
-      document.getElementById('stackCard').classList.remove('flipped');
-      document.getElementById('s_topic').textContent = c.topic;
-      document.getElementById('s_q').textContent = c.q;
-      document.getElementById('s_a').textContent = c.a;
-      document.getElementById('s_sub').textContent = c.sub;
-      document.getElementById('s_id').textContent = '#' + c.id;
-      // Atualiza stats para refletir o cartão atual
-      document.getElementById('stats').textContent = `${state.stackIndex + 1}/${state.filtered.length}`;
     }
 
     // ----- Utils -----
