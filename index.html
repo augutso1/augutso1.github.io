@@ -223,6 +223,37 @@
     .big {
       min-height: 280px
     }
+
+    .empty {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      border: 1px dashed #374151;
+      border-radius: 14px;
+      background: #0b1220;
+      min-height: 240px;
+      text-align: center;
+      color: var(--muted)
+    }
+
+    .empty .title {
+      font-size: 16px;
+      color: var(--text)
+    }
+
+    .empty .desc {
+      margin-top: 6px;
+      font-size: 14px
+    }
+
+    .empty .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px
+    }
   </style>
 </head>
 
@@ -384,11 +415,20 @@
     function renderGrid() {
       const grid = document.getElementById('grid');
       if (state.all.length === 0) {
-        grid.innerHTML = '<div class="pill muted big">Nenhum cartão. Clique em "Importar CSV" e use cabeçalho: topic,sub,q,a</div>';
+        grid.innerHTML = `
+          <div class="empty">
+            <div class="title">Nenhum cartão importado</div>
+            <div class="desc">Clique no botão abaixo e selecione um arquivo CSV com as colunas: topic, sub, q, a. Opcionalmente, use apenas q, a.</div>
+            <div class="actions">
+              <button class="btn primary" id="empty-import">Importar CSV</button>
+            </div>
+          </div>`;
+        const btn = document.getElementById('empty-import');
+        if (btn) btn.onclick = () => { document.getElementById('file').click(); };
         return;
       }
       if (state.filtered.length === 0) {
-        grid.innerHTML = '<div class="pill muted">Nenhum resultado para os filtros atuais.</div>';
+        grid.innerHTML = '<div class="empty">Nenhum resultado para os filtros atuais.</div>';
         return;
       }
       grid.innerHTML = state.filtered.map(renderCard).join('');
