@@ -233,6 +233,8 @@
       <input id="search" type="search" placeholder="buscar… (ex.: DNS, HTTP, camada de rede)" />
       <select id="topic"></select>
       <select id="sub"></select>
+      <button id="import" class="btn">Importar CSV</button>
+      <input id="file" type="file" accept=".csv,text/csv" class="hidden" />
       <button id="shuffle" class="btn">Embaralhar</button>
       <span class="pill stats" id="stats">0/0</span>
       <button id="reset" class="btn">Zerar Progresso</button>
@@ -242,66 +244,90 @@
     <section id="grid" class="grid"></section>
   </main>
   <script>
-    // ===== Dataset ==============================================================
-    // Fonte: PDFs/imagens enviados pelo usuário. As questões foram resumidas e
-    // organizadas por tópico e subtópico.
-    const DATA = [
-      // --- CONCEITOS / HISTÓRIA / GOVERNANÇA ---
-      { topic: 'Conceitos & História', sub: 'Definições', q: 'Definição clássica de rede de computadores?', a: 'Conjunto de computadores AUTÔNOMOS interconectados capazes de trocar informações por diferentes meios (cobre, fibra, rádio, satélite).' },
-      { topic: 'Conceitos & História', sub: 'Evolução', q: 'Nos anos 70, qual consequência da descentralização motivou as primeiras redes?', a: 'A necessidade de COMPARTILHAR dados e periféricos e gerenciar informação espalhada.' },
-      { topic: 'Conceitos & História', sub: 'Organizações', q: 'O que é RFC?', a: 'Request for Comments: documento público e numerado que propõe/atualiza protocolos, padrões e políticas da Internet.' },
-      { topic: 'Conceitos & História', sub: 'Organizações', q: 'Função da IANA?', a: 'Gerir números e nomes: endereços IPv4/IPv6, DNS (TLDs), portas de protocolo e identificadores.' },
-      { topic: 'Conceitos & História', sub: 'Brasil', q: 'O que marcou a massificação da Internet no Brasil em 1995?', a: 'A montagem do backbone comercial pela Embratel (serviço para empresas e público).' },
-      { topic: 'Conceitos & História', sub: 'Termos', q: 'Backbone é…', a: 'A espinha dorsal que interliga redes e regiões, transportando tráfego de longa distância.' },
+    // ===== Storage / CSV Import =================================================
+    const STORAGE_CARDS_KEY = 'rc_cards';
 
-      // --- MODELOS DE CAMADA ---
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Comparação', q: 'Como a camada de Aplicação no TCP/IP é definida vs. OSI?', a: 'No TCP/IP as aplicações são definidas por protocolos descritos em RFCs (sem estrutura rígida); o OSI separa Sessão/Apresentação/Aplicação.' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Transporte', q: 'Quando usar UDP em vez de TCP?', a: 'Streaming ao vivo/tempo real: tolera perda, prioriza baixa latência; UDP é não orientado a conexão e simples.' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Inter‑Rede', q: 'O que significa dizer que o IP é “não confiável”?', a: 'Não garante entrega, ordem ou integridade dos pacotes; camadas superiores cuidam disso (ex.: TCP).' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Interface de Rede', q: 'Principal função desta camada no TCP/IP relacionada a endereços?', a: 'Traduzir endereços Lógicos (IP) em endereços físicos (MAC/next‑hop). Corresponde às camadas Física + Enlace do OSI.' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'OSI – Enlace', q: 'Responsabilidades da camada de Enlace (OSI)?', a: 'Detecção/correção de erros da Física, enquadramento (frames) e controle de fluxo no enlace.' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'OSI – Rede', q: 'Serviço onde pacotes podem seguir rotas diferentes?', a: 'Serviço de datagramas (não orientado à conexão).' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'OSI – Apresentação', q: 'Função crítica p/ arquiteturas diferentes (endianess)?', a: 'Transformar dados para uma representação canônica comum.' },
-      { topic: 'Modelos (OSI/TCP-IP)', sub: 'Encapsulamento', q: 'Unidade formada na ENLACE antes dos bits?', a: 'Quadro (frame) com cabeçalho/CRC (FCS).' },
+    function loadCards() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || '[]');
+        return Array.isArray(raw) ? raw : [];
+      } catch (e) {
+        console.warn('Cartas inválidas no localStorage. Reiniciando.');
+        return [];
+      }
+    }
 
-      // --- DNS ---
-      { topic: 'DNS', sub: 'Conceito', q: 'Tarefa essencial do DNS?', a: 'Mapear nomes de domínio em endereços IP.' },
-      { topic: 'DNS', sub: 'Motivação', q: 'Por que abandonar o namespace “flat”?', a: 'Conflito de nomes, inviabilidade de administração central e recursos insuficientes; solução: nomes HIERÁRQUICOS e distribuídos.' },
-      { topic: 'DNS', sub: 'Componentes', q: 'Quem inicia a busca de IP consultando servidores de nomes?', a: 'O resolvedor (cliente DNS) chama o servidor recursivo que segue na hierarquia.' },
-      { topic: 'DNS', sub: 'Fluxo', q: 'Ordem típica de resolução?', a: 'Cliente/Resolver → Servidor Recursivo → Raiz → TLD → Autoritativo → Recursivo (cache) → Cliente.' },
-      { topic: 'DNS', sub: 'Tipos de consulta', q: 'Recursiva vs. Iterativa vs. Não‑recursiva?', a: 'Recursiva: cliente ↔ recursivo (entrega final). Iterativa: recursivo ↔ (raiz/TLD/autoritativo) recebendo referências. Não‑recursiva: resposta direta do cache/autoridade conhecida.' },
-      { topic: 'DNS', sub: 'Registros', q: 'A, AAAA, MX, NS – o que cada um faz?', a: 'A: nome→IPv4; AAAA: nome→IPv6; MX: servidor(s) de e‑mail do domínio; NS: servidores autoritativos do domínio.' },
-      { topic: 'DNS', sub: 'SOA/TTL', q: 'Papel do “minimum TTL” no SOA?', a: 'Indica por quanto tempo registros podem permanecer em cache.' },
-      { topic: 'DNS', sub: 'Ferramentas', q: 'Para que serve o nslookup -type=mx domínio?', a: 'Consulta os servidores de e‑mail (MX) e suas prioridades (menor número = maior prioridade).' },
-      { topic: 'DNS', sub: 'Raiz/TLD', q: 'Quantas “zonas lógicas” de servidores raiz existem e por quê há muitas réplicas?', a: '13 zonas lógicas; centenas de réplicas (anycast) para resiliência e baixa latência.' },
+    function saveCards(cards) {
+      localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(cards));
+    }
 
-      // --- HTTP / WEB ---
-      { topic: 'Web (HTTP/Cache)', sub: 'Versões', q: 'Por que HTTP/1.1 costuma ser mais rápido que 1.0?', a: 'Conexões PERSISTENTES permitem transferir múltiplos objetos por uma única conexão TCP.' },
-      { topic: 'Web (HTTP/Cache)', sub: 'Respostas', q: 'O que significa 404 Not Found?', a: 'Servidor não localizou o recurso solicitado (URI não corresponde a objeto existente).' },
-      { topic: 'Web (HTTP/Cache)', sub: 'Cache', q: 'Quem tem precedência: Cache-Control: max-age ou Expires?', a: 'Cache-Control (diretriz moderna) prevalece sobre Expires.' },
+    function sniffDelimiter(text) {
+      const first = (text.split(/\r?\n/)[0] || '');
+      const commas = (first.match(/,/g) || []).length;
+      const semis = (first.match(/;/g) || []).length;
+      return semis > commas ? ';' : ',';
+    }
 
-      // --- E‑MAIL ---
-      { topic: 'E‑mail', sub: 'Protocolos', q: 'Quais protocolos para envio e para leitura de e‑mails?', a: 'Envio: SMTP. Leitura: POP3 ou IMAP.' },
-      { topic: 'E‑mail', sub: 'Caminho', q: 'Fluxo típico (cliente→servidores→cliente) do serviço de e‑mail?', a: '1 SMTP (cliente→servidor de origem), 2 SMTP (entre servidores), 3 SMTP (entrega no servidor de destino), 4 POP/IMAP (cliente lê).' },
+    function parseCSV(text) {
+      const delim = sniffDelimiter(text);
+      const rows = [];
+      let row = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+          if (inQuotes && text[i + 1] === '"') { cell += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (ch === '\r') {
+          // ignore
+        } else if (ch === '\n') {
+          if (inQuotes) { cell += '\n'; }
+          else { row.push(cell); rows.push(row); row = []; cell = ''; }
+        } else if (ch === delim && !inQuotes) {
+          row.push(cell); cell = '';
+        } else {
+          cell += ch;
+        }
+      }
+      if (cell.length > 0 || row.length > 0) { row.push(cell); rows.push(row); }
+      rows.forEach(r => { for (let i = 0; i < r.length; i++) r[i] = (r[i] || '').trim(); });
+      return rows.filter(r => r.length && r.join('').length);
+    }
 
-      // --- TOPOLOGIAS / CLASSIFICAÇÃO ---
-      { topic: 'Topologias', sub: 'Física vs. Lógica', q: 'Diferença principal entre topologia física e lógica?', a: 'Física = disposição dos cabos e nós; Lógica = como os dados fluem/formatos de comunicação.' },
-      { topic: 'Topologias', sub: 'Barra', q: 'Desvantagem crítica da topologia em barra?', a: 'Colisões, difícil detecção de falhas e um ponto de falha no barramento que derruba toda a rede.' },
-      { topic: 'Topologias', sub: 'Estrela (LAN)', q: 'Por que estrela é popular em LANs?', a: 'Nó central facilita gestão; falha de um enlace não para a rede inteira.' },
-      { topic: 'Classificação', sub: 'Geográfica', q: 'Interligar campi em várias cidades: LAN, MAN ou WAN?', a: 'WAN (longa distância, maior retardo/menor taxa que LAN).' },
+    function normalizeKey(s) {
+      return (s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z]/g, '');
+    }
 
-      // --- MEIOS FÍSICOS / TRANSMISSÃO ---
-      { topic: 'Meios Físicos', sub: 'Par Trançado', q: 'Uma desvantagem do cabo de par trançado:', a: 'Susceptível a interferências; comprimento típico de até 100 m por lance.' },
-      { topic: 'Meios Físicos', sub: 'Fibra Ótica', q: 'Principal barreira para adoção ampla da fibra?', a: 'CUSTO (cabo, ferramentas e mão de obra especializados).' },
-      { topic: 'Transmissão', sub: 'Sentido', q: 'Controle de tráfego aéreo (não pode falar simultâneo). Qual o modo?', a: 'Half‑duplex (ambos transmitem, mas não ao mesmo tempo).' },
-      { topic: 'Transmissão', sub: 'Problemas', q: 'O que é “retardo” na comunicação?', a: 'Diferença entre o instante de transmissão e o de recepção (atraso total).' },
-
-      // --- EXTRAS (Exercícios abertos convertidos em cartões curtos) ---
-      { topic: 'Extras', sub: 'Redes de acesso', q: 'O que são redes de acesso?', a: 'Redes que conectam usuários finais (ADSL, cabo, FTTH) à rede do provedor/Internet.' },
-      { topic: 'Extras', sub: 'Redes core', q: 'O que é rede “core”?', a: 'Espinha dorsal de uma operadora/organização que interliga pontos de acesso e serviços.' },
-      { topic: 'Extras', sub: 'Sistemas finais', q: 'O que são nós/sistemas finais?', a: 'Dispositivos que enviam/recebem dados (PCs, servidores, impressoras, etc.).' },
-      { topic: 'Extras', sub: 'FTP', q: 'Por que o FTP usa duas portas TCP (21 e 20)?', a: 'Separar controle (autenticação/comandos) do fluxo de dados de transferência.' },
-    ];
+    function csvToCards(text) {
+      const rows = parseCSV(text);
+      if (!rows.length) return [];
+      const header = rows[0].map(normalizeKey);
+      const idx = { topic: -1, sub: -1, q: -1, a: -1 };
+      header.forEach((h, i) => {
+        if (h === 'topic' || h === 'topico' || h === 'assunto') idx.topic = i;
+        else if (h === 'sub' || h === 'subtopic' || h === 'subtopico') idx.sub = i;
+        else if (h === 'q' || h === 'question' || h === 'pergunta' || h === 'questao') idx.q = i;
+        else if (h === 'a' || h === 'answer' || h === 'resposta') idx.a = i;
+      });
+      if (idx.q === -1 && header.length >= 2) { idx.q = 0; idx.a = 1; }
+      const cards = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        const q = idx.q >= 0 ? (row[idx.q] || '').trim() : '';
+        const a = idx.a >= 0 ? (row[idx.a] || '').trim() : '';
+        if (!q || !a) continue;
+        const topic = idx.topic >= 0 ? (row[idx.topic] || '').trim() : 'Importado';
+        const sub = idx.sub >= 0 ? (row[idx.sub] || '').trim() : 'Geral';
+        cards.push({ topic, sub, q, a });
+      }
+      cards.forEach((c, i) => c.id = i + 1);
+      return cards;
+    }
 
     // ===== App State ============================================================
     function safeProgress() {
@@ -315,10 +341,8 @@
     };
 
     function init() {
-      // Validação rápida do dataset ("testes" em tempo de execução)
-      selfTestsRawData();
-      // atribuir IDs estáveis às cartas
-      state.all = DATA.map((c, i) => ({ ...c, id: i + 1 }));
+      // carregar cartas importadas (se existirem)
+      state.all = loadCards();
       selfTestsState();
       renderFilters();
       applyFilters();
@@ -359,6 +383,14 @@
     // ----- Grid de cartas -----
     function renderGrid() {
       const grid = document.getElementById('grid');
+      if (state.all.length === 0) {
+        grid.innerHTML = '<div class="pill muted big">Nenhum cartão. Clique em "Importar CSV" e use cabeçalho: topic,sub,q,a</div>';
+        return;
+      }
+      if (state.filtered.length === 0) {
+        grid.innerHTML = '<div class="pill muted">Nenhum resultado para os filtros atuais.</div>';
+        return;
+      }
       grid.innerHTML = state.filtered.map(renderCard).join('');
       grid.querySelectorAll('.card').forEach(card => attachCardEvents(card));
     }
@@ -430,6 +462,32 @@
     function bindGlobal() {
       document.getElementById('shuffle').onclick = () => { shuffle(state.filtered); renderGrid(); };
       document.getElementById('reset').onclick = () => { if (confirm('Limpar progresso salvo?')) { state.progress.clear(); persistProgress(); updateStats(); renderGrid(); } };
+      document.getElementById('import').onclick = () => { document.getElementById('file').click(); };
+      document.getElementById('file').onchange = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const cards = csvToCards(text);
+          if (!cards.length) { alert('CSV vazio ou sem cartões válidos.'); return; }
+          state.progress.clear();
+          persistProgress();
+          saveCards(cards);
+          state.all = cards;
+          // reset filtros
+          document.getElementById('topic').value = '';
+          document.getElementById('sub').value = '';
+          document.getElementById('search').value = '';
+          renderFilters();
+          applyFilters();
+          alert('Cartões importados: ' + cards.length);
+        } catch (err) {
+          console.error(err);
+          alert('Falha ao importar CSV.');
+        } finally {
+          e.target.value = '';
+        }
+      };
     }
 
     // ----- Utils -----
@@ -437,14 +495,6 @@
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
 
     // ===== Self-tests (dev) =====
-    function selfTestsRawData() {
-      console.groupCollapsed('Flashcards – self-tests (DATA)');
-      console.assert(Array.isArray(DATA) && DATA.length > 0, 'DATA deve ser um array não-vazio');
-      DATA.forEach((c, i) => {
-        console.assert(c.topic && c.sub && c.q && c.a, 'Card faltando campos obrigatórios em index ' + i);
-      });
-      console.groupEnd();
-    }
     function selfTestsState() {
       console.groupCollapsed('Flashcards – self-tests (STATE)');
       const ids = new Set();
