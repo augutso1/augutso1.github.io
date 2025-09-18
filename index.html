@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flashcards – Redes de Computadores</title>
+  <title>Flashcard Viewer</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -21,6 +21,44 @@
       /* violet-400 */
       --good: #34d399;
       /* emerald-400 */
+      /* theming tokens */
+      --surface: #0b1220;
+      --border: #1f2937;
+      --tag-border: #374151;
+      --tag-text: #c7d2fe;
+      --card-bg: linear-gradient(180deg, #0b1324, #0e1426);
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --panel: #ffffffee;
+      --muted: #475569;
+      --text: #0f172a;
+      --accent: #0ea5e9;
+      --accent-2: #7c3aed;
+      --good: #16a34a;
+      --surface: #ffffff;
+      --border: #e5e7eb;
+      --tag-border: #e2e8f0;
+      --tag-text: #334155;
+      --card-bg: #ffffff;
+    }
+
+    /* Extra dark theme */
+    [data-theme="dark"] {
+      --bg: #0a0f1a;
+      --panel: #0b1220ee;
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --accent: #22d3ee;
+      --accent-2: #a78bfa;
+      --good: #34d399;
+      --surface: #0b1220;
+      --border: #1e293b;
+      --tag-border: #273044;
+      --tag-text: #cbd5e1;
+      --card-bg: #0b0f1a;
     }
 
     * {
@@ -29,7 +67,7 @@
 
     body {
       margin: 0;
-      background: #0f172a;
+      background: var(--bg);
       font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
       color: var(--text)
     }
@@ -59,12 +97,13 @@
     select,
     button,
     input[type="search"] {
-      background: #0b1220;
-      border: 1px solid #1f2937;
+      background: var(--surface);
+      border: 1px solid var(--border);
       color: var(--text);
       padding: 10px 12px;
-      border-radius: 12px;
-      outline: none
+      border-radius: 10px;
+      outline: none;
+      appearance: none;
     }
 
     button {
@@ -105,8 +144,8 @@
     .card {
       position: relative;
       min-height: 220px;
-      background: linear-gradient(180deg, #0b1324, #0e1426);
-      border: 1px solid #203048;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 18px;
       perspective: 1000px;
       box-shadow: 0 10px 30px #0004
@@ -173,11 +212,16 @@
 
     .tag {
       font-size: 11px;
-      color: #c7d2fe;
-      border: 1px dashed #374151;
-      border-radius: 10px;
+      color: var(--tag-text);
+      border: 1px dashed var(--tag-border);
+      border-radius: 8px;
       padding: 4px 8px;
-      opacity: .8
+      opacity: .8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1;
     }
 
     .ok {
@@ -188,8 +232,8 @@
     .btn {
       padding: 8px 12px;
       border-radius: 10px;
-      border: 1px solid #243041;
-      background: #0a1222
+      border: 1px solid var(--border);
+      background: var(--surface)
     }
 
     .primary {
@@ -231,9 +275,9 @@
       align-items: center;
       justify-content: center;
       padding: 28px;
-      border: 1px dashed #374151;
+      border: 1px dashed var(--tag-border);
       border-radius: 14px;
-      background: #0b1220;
+      background: var(--surface);
       min-height: 240px;
       text-align: center;
       color: var(--muted)
@@ -259,7 +303,7 @@
 
 <body>
   <header>
-    <h1>Flashcards – Redes de Computadores</h1>
+    <h1>Flashcard Viewer</h1>
     <div class="controls">
       <input id="search" type="search" placeholder="buscar… (ex.: DNS, HTTP, camada de rede)" />
       <select id="topic"></select>
@@ -269,6 +313,12 @@
       <button id="shuffle" class="btn">Embaralhar</button>
       <span class="pill stats" id="stats">0/0</span>
       <button id="reset" class="btn">Zerar Progresso</button>
+      <button id="reset-csv" class="btn">Resetar CSV</button>
+      <select id="theme">
+        <option value="default">Tema: Padrão</option>
+        <option value="light">Tema: Claro</option>
+        <option value="dark">Tema: Escuro</option>
+      </select>
     </div>
   </header>
   <main>
@@ -277,6 +327,7 @@
   <script>
     // ===== Storage / CSV Import =================================================
     const STORAGE_CARDS_KEY = 'rc_cards';
+    const THEME_KEY = 'rc_theme';
 
     function loadCards() {
       try {
@@ -378,6 +429,11 @@
       renderFilters();
       applyFilters();
       bindGlobal();
+      // aplicar tema salvo
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'default';
+      applyTheme(savedTheme);
+      const themeSel = document.getElementById('theme');
+      if (themeSel) themeSel.value = savedTheme;
     }
 
     // ----- Filtros -----
@@ -503,6 +559,28 @@
       document.getElementById('shuffle').onclick = () => { shuffle(state.filtered); renderGrid(); };
       document.getElementById('reset').onclick = () => { if (confirm('Limpar progresso salvo?')) { state.progress.clear(); persistProgress(); updateStats(); renderGrid(); } };
       document.getElementById('import').onclick = () => { document.getElementById('file').click(); };
+      const resetCsvBtn = document.getElementById('reset-csv');
+      if (resetCsvBtn) resetCsvBtn.onclick = () => {
+        if (confirm('Remover cartas importadas e progresso?')) {
+          localStorage.removeItem(STORAGE_CARDS_KEY);
+          localStorage.removeItem('rc_progress');
+          state.all = [];
+          state.filtered = [];
+          state.progress = new Set();
+          // reset filtros
+          document.getElementById('topic').value = '';
+          document.getElementById('sub').value = '';
+          document.getElementById('search').value = '';
+          renderFilters();
+          applyFilters();
+        }
+      };
+      const themeSel = document.getElementById('theme');
+      if (themeSel) themeSel.addEventListener('change', (e) => {
+        const value = e.target.value;
+        applyTheme(value);
+        localStorage.setItem(THEME_KEY, value);
+      });
       document.getElementById('file').onchange = async (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -533,6 +611,13 @@
     // ----- Utils -----
     function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[arr[i], arr[j]] = [arr[j], arr[i]] } }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
+    function applyTheme(value) {
+      if (value === 'default') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', value);
+      }
+    }
 
     // ===== Self-tests (dev) =====
     function selfTestsState() {
